@@ -1,9 +1,8 @@
-// Show model reasoning (<think>...</think>) to the user
-const SHOW_REASONING = true;  
+const SHOW_REASONING =
+  (process.env.SHOW_REASONING || "false").toLowerCase() === "true";
 
-// Enable NIM "thinking mode" so the model reasons more deeply internally
-const ENABLE_THINKING_MODE = true;
-// ===============================
+const ENABLE_THINKING_MODE =
+  (process.env.ENABLE_THINKING_MODE || "false").toLowerCase() === "true";
 
 // Chat completions endpoint (main proxy)
 app.post('/v1/chat/completions', async (req, res) => {
