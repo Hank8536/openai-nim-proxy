@@ -1,6 +1,6 @@
-import express from "express";
-import cors from "cors";
-import axios from "axios";
+const express = require("express");
+const cors = require("cors");
+const axios = require("axios");
 
 // Initialize Express
 const app = express();
@@ -14,6 +14,9 @@ const SHOW_REASONING =
 const ENABLE_THINKING_MODE =
   (process.env.ENABLE_THINKING_MODE || "false").toLowerCase() === "true";
 
+// Required NIM API config
+const NIM_API_KEY = process.env.NIM_API_KEY;
+const NIM_API_BASE = process.env.NIM_API_BASE || "https://integrate.api.nvidia.com";
 // Required NIM API config
 const NIM_API_KEY = process.env.NIM_API_KEY;
 const NIM_API_BASE = process.env.NIM_API_BASE || "https://integrate.api.nvidia.com";
