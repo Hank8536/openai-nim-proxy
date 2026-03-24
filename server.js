@@ -16,63 +16,56 @@ const ENABLE_THINKING_MODE =
 
 // Required NIM API config
 const NIM_API_KEY = process.env.NIM_API_KEY;
-const NIM_API_BASE = process.env.NIM_API_BASE || "https://integrate.api.nvidia.com";
-// Required NIM API config
-const NIM_API_KEY = process.env.NIM_API_KEY;
-const NIM_API_BASE = process.env.NIM_API_BASE || "https://integrate.api.nvidia.com";
+const NIM_API_BASE =
+  process.env.NIM_API_BASE || "https://integrate.api.nvidia.com";
 
-// Chat completions endpoint (main proxy)
-app.post('/v1/chat/completions', async (req, res) => {
+// Chat completions proxy
+app.post("/v1/chat/completions", async (req, res) => {
   try {
     const { model, messages, temperature, max_tokens, stream } = req.body;
 
-    // Direct passthrough: use the model exactly as provided
-    const nimModel = model;
-
-    // Transform OpenAI request to NIM format
     const nimRequest = {
-      model: nimModel,
-      messages: messages,
+      model,
+      messages,
       temperature: temperature || 0.6,
       max_tokens: max_tokens || 9024,
       extra_body: ENABLE_THINKING_MODE
         ? { chat_template_kwargs: { thinking: true } }
         : undefined,
-      stream: stream || false
+      stream: stream || false,
     };
 
-    // Make request to NVIDIA NIM API
     const response = await axios.post(
       `${NIM_API_BASE}/chat/completions`,
       nimRequest,
       {
         headers: {
-          'Authorization': `Bearer ${NIM_API_KEY}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${NIM_API_KEY}`,
+          "Content-Type": "application/json",
         },
-        responseType: stream ? 'stream' : 'json'
+        responseType: stream ? "stream" : "json",
       }
     );
 
+    // --- Streaming Mode ---
     if (stream) {
-      // Streaming passthrough with thinking support
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
 
-      let buffer = '';
+      let buffer = "";
       let reasoningStarted = false;
 
-      response.data.on('data', (chunk) => {
+      response.data.on("data", (chunk) => {
         buffer += chunk.toString();
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
-        lines.forEach(line => {
-          if (!line.startsWith('data: ')) return;
+        lines.forEach((line) => {
+          if (!line.startsWith("data: ")) return;
 
-          if (line.includes('[DONE]')) {
-            res.write(line + '\n');
+          if (line.includes("[DONE]")) {
+            res.write(line + "\n");
             return;
           }
 
@@ -84,87 +77,87 @@ app.post('/v1/chat/completions', async (req, res) => {
               const content = data.choices[0].delta.content;
 
               if (SHOW_REASONING) {
-                let out = '';
+                let out = "";
 
                 if (reasoning && !reasoningStarted) {
-                  out = '<think>\n' + reasoning;
+                  out = "<think>\n" + reasoning;
                   reasoningStarted = true;
                 } else if (reasoning) {
                   out = reasoning;
                 }
 
                 if (content && reasoningStarted) {
-                  out += '</think>\n\n' + content;
+                  out += "</think>\n\n" + content;
                   reasoningStarted = false;
                 } else if (content) {
                   out += content;
                 }
 
-                data.choices[0].delta.content = out || '';
-                delete data.choices[0].delta.reasoning_content;
+                data.choices[0].delta.content = out || "";
               } else {
-                data.choices[0].delta.content = content || '';
-                delete data.choices[0].delta.reasoning_content;
+                data.choices[0].delta.content = content || "";
               }
+
+              delete data.choices[0].delta.reasoning_content;
             }
 
             res.write(`data: ${JSON.stringify(data)}\n\n`);
-          } catch (e) {
-            res.write(line + '\n');
+          } catch (err) {
+            res.write(line + "\n");
           }
         });
       });
 
-      response.data.on('end', () => res.end());
-      response.data.on('error', (err) => {
-        console.error('Stream error:', err);
-        res.end();
-      });
-
-    } else {
-      // Normal completion response
-      const openaiResponse = {
-        id: `chatcmpl-${Date.now()}`,
-        object: 'chat.completion',
-        created: Math.floor(Date.now() / 1000),
-        model: model,
-        choices: response.data.choices.map(choice => {
-          let fullContent = choice.message?.content || '';
-
-          if (SHOW_REASONING && choice.message?.reasoning_content) {
-            fullContent =
-              '<think>\n' +
-              choice.message.reasoning_content +
-              '\n</think>\n\n' +
-              fullContent;
-          }
-
-          return {
-            index: choice.index,
-            message: {
-              role: choice.message.role,
-              content: fullContent
-            },
-            finish_reason: choice.finish_reason
-          };
-        }),
-        usage:
-          response.data.usage ||
-          { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-      };
-
-      res.json(openaiResponse);
+      response.data.on("end", () => res.end());
+      response.data.on("error", () => res.end());
+      return;
     }
 
+    // --- Normal Mode ---
+    const openaiResponse = {
+      id: `chatcmpl-${Date.now()}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model,
+      choices: response.data.choices.map((choice) => {
+        let fullContent = choice.message?.content || "";
+
+        if (SHOW_REASONING && choice.message?.reasoning_content) {
+          fullContent =
+            "<think>\n" +
+            choice.message.reasoning_content +
+            "\n</think>\n\n" +
+            fullContent;
+        }
+
+        return {
+          index: choice.index,
+          message: { role: choice.message.role, content: fullContent },
+          finish_reason: choice.finish_reason,
+        };
+      }),
+      usage:
+        response.data.usage || {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0,
+        },
+    };
+
+    res.json(openaiResponse);
   } catch (error) {
-    console.error('Proxy error:', error.message);
+    console.error("Proxy error:", error.message);
 
     res.status(error.response?.status || 500).json({
       error: {
-        message: error.message || 'Internal server error',
-        type: 'invalid_request_error',
-        code: error.response?.status || 500
-      }
+        message: error.message || "Internal server error",
+        type: "invalid_request_error",
+        code: error.response?.status || 500,
+      },
     });
   }
 });
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Proxy server running on port " + PORT));
