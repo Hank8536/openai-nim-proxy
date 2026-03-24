@@ -7,11 +7,16 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Env-driven config (controlled by Railway Variables)
 const SHOW_REASONING =
   (process.env.SHOW_REASONING || "false").toLowerCase() === "true";
 
 const ENABLE_THINKING_MODE =
   (process.env.ENABLE_THINKING_MODE || "false").toLowerCase() === "true";
+
+// Required NIM API config
+const NIM_API_KEY = process.env.NIM_API_KEY;
+const NIM_API_BASE = process.env.NIM_API_BASE || "https://integrate.api.nvidia.com";
 
 // Chat completions endpoint (main proxy)
 app.post('/v1/chat/completions', async (req, res) => {
