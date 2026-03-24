@@ -1,3 +1,10 @@
+// Show model reasoning (<think>...</think>) to the user
+const SHOW_REASONING = true;  
+
+// Enable NIM "thinking mode" so the model reasons more deeply internally
+const ENABLE_THINKING_MODE = true;
+// ===============================
+
 // Chat completions endpoint (main proxy)
 app.post('/v1/chat/completions', async (req, res) => {
   try {
@@ -12,7 +19,9 @@ app.post('/v1/chat/completions', async (req, res) => {
       messages: messages,
       temperature: temperature || 0.6,
       max_tokens: max_tokens || 9024,
-      extra_body: ENABLE_THINKING_MODE ? { chat_template_kwargs: { thinking: true } } : undefined,
+      extra_body: ENABLE_THINKING_MODE
+        ? { chat_template_kwargs: { thinking: true } }
+        : undefined,
       stream: stream || false
     };
 
@@ -107,7 +116,11 @@ app.post('/v1/chat/completions', async (req, res) => {
           let fullContent = choice.message?.content || '';
 
           if (SHOW_REASONING && choice.message?.reasoning_content) {
-            fullContent = '<think>\n' + choice.message.reasoning_content + '\n</think>\n\n' + fullContent;
+            fullContent =
+              '<think>\n' +
+              choice.message.reasoning_content +
+              '\n</think>\n\n' +
+              fullContent;
           }
 
           return {
@@ -119,7 +132,9 @@ app.post('/v1/chat/completions', async (req, res) => {
             finish_reason: choice.finish_reason
           };
         }),
-        usage: response.data.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+        usage:
+          response.data.usage ||
+          { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
       };
 
       res.json(openaiResponse);
