@@ -14,9 +14,11 @@ app.use(express.json());
 const NIM_API_BASE = process.env.NIM_API_BASE || 'https://integrate.api.nvidia.com/v1';
 const NIM_API_KEY = process.env.NIM_API_KEY;
 
-// 🔥 Toggles
-const SHOW_REASONING = false;        // Show <think> blocks
-const ENABLE_THINKING_MODE = false;  // Enable "thinking" parameter
+const SHOW_REASONING =
+  (process.env.SHOW_REASONING || "").toLowerCase() === "true";
+
+const ENABLE_THINKING_MODE =
+  (process.env.THINKING_MODE || "").toLowerCase() === "true";
 
 // Health check
 app.get('/health', (req, res) => {
