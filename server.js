@@ -14,11 +14,11 @@ app.use(express.json());
 const NIM_API_BASE = process.env.NIM_API_BASE || 'https://integrate.api.nvidia.com/v1';
 const NIM_API_KEY = process.env.NIM_API_KEY;
 
-const SHOW_REASONING =
-  (process.env.SHOW_REASONING || "").toLowerCase() === "true";
+const SHOW_REASONING = true
+//  (process.env.SHOW_REASONING || "").toLowerCase() === "true";
 
-const ENABLE_THINKING_MODE =
-  (process.env.THINKING_MODE || "").toLowerCase() === "true";
+const ENABLE_THINKING_MODE = true
+//  (process.env.THINKING_MODE || "").toLowerCase() === "true";
 
 // Health check
 app.get('/health', (req, res) => {
